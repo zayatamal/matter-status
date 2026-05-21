@@ -4,6 +4,7 @@
 const TRIGGER_HANDLER = "updateMattermostStatusFromCurrentEvent";
 const CUSTOM_STATUS_MARKER = "custom_status";
 const MATTERMOST_USER_ID_CACHE_KEY = "MATTERMOST_USER_ID";
+const LAST_SET_STATUS_CACHE_KEY = "LAST_SET_STATUS";
 const CALENDAR_EVENT_SEARCH_WINDOW_MS = 1000;
 const MORNING_TRIGGER_START_HOUR = 0;
 const MORNING_TRIGGER_START_MINUTE = 0;
@@ -20,7 +21,7 @@ function onCalendarChange() {
   if (hours < WORK_START_HOUR || hours > WORK_END_HOUR) return;
   if (day === 0 || day === 6) return; // skip weekends
 
-  if (!getCurrentStatusEvent()) clearMattermostCustomStatus();
+  if (!getCurrentStatusEvent()) clearMattermostCustomStatusIfSetByScript();
   planEventStatusTriggers();
 }
 
@@ -155,7 +156,39 @@ function updateMattermostStatusFromCurrentEvent() {
   updateMattermostStatusFromEvent(event);
 }
 
+function isCurrentStatusManual() {
+  const props = PropertiesService.getScriptProperties();
+  const lastSetJson = props.getProperty(LAST_SET_STATUS_CACHE_KEY);
+
+  const currentRaw = getMattermostCustomStatus();
+  let current;
+  try {
+    current = typeof currentRaw === "string" ? JSON.parse(currentRaw) : currentRaw;
+  } catch (e) {
+    return false; // Can't parse — assume not manual, allow update
+  }
+
+  // No active status
+  if (!current || !current.emoji) return false;
+
+  // Expired status is not blocking.
+  // Ignore the Go zero time ("0001-01-01") which Mattermost uses to mean "no expiry".
+  if (current.expires_at) {
+    const expiresAt = new Date(current.expires_at);
+    if (expiresAt.getFullYear() > 1 && expiresAt <= new Date()) return false;
+  }
+
+  // Active status — check if this script set it
+  const lastSet = lastSetJson ? JSON.parse(lastSetJson) : null;
+  return !lastSet || current.emoji !== lastSet.emoji || current.text !== lastSet.text;
+}
+
 function updateMattermostStatus(statusData) {
+  if (isCurrentStatusManual()) {
+    Logger.log("Current status was set manually, skipping update");
+    return;
+  }
+
   const userId = getMattermostUserId();
   const url = `${MATTERMOST_URL}/api/v4/users/${userId}/status/custom`;
 
@@ -180,6 +213,10 @@ function updateMattermostStatus(statusData) {
 
   if (code === 200) {
     Logger.log(`Status updated: ${statusData.text} ${statusData.emoji}`);
+    PropertiesService.getScriptProperties().setProperty(
+      LAST_SET_STATUS_CACHE_KEY,
+      JSON.stringify({ emoji: statusData.emoji, text: statusData.text })
+    );
   } else {
     Logger.log(
       `Failed to update status (code: ${code}): ${response.getContentText()}`
@@ -207,12 +244,29 @@ function clearMattermostCustomStatus() {
 
     if (code === 200) {
       Logger.log("Custom status cleared");
+      PropertiesService.getScriptProperties().deleteProperty(LAST_SET_STATUS_CACHE_KEY);
     } else {
       Logger.log(`Failed to clear status (code: ${code})`);
     }
   } catch (err) {
     Logger.log(`Error clearing custom status: ${err}`);
   }
+}
+
+function clearMattermostCustomStatusIfSetByScript() {
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty(LAST_SET_STATUS_CACHE_KEY)) {
+    Logger.log("No status was set by this script, skipping clear");
+    return;
+  }
+
+  if (isCurrentStatusManual()) {
+    Logger.log("Current status was not set by this script, skipping clear");
+    props.deleteProperty(LAST_SET_STATUS_CACHE_KEY);
+    return;
+  }
+
+  clearMattermostCustomStatus();
 }
 
 function getMattermostCustomStatus() {
