@@ -162,6 +162,62 @@ custom_status
 
 ### How It Works
 
+```mermaid
+flowchart TD
+    subgraph TRIGGERS["What triggers the script"]
+        A([Every day at midnight])
+        C([Calendar change event])
+        ST([Scheduled trigger fires at event start])
+    end
+
+    subgraph CHANGE["On calendar change"]
+        D{Working hours?}
+        F{Status event active now?}
+        G{Script set the status?}
+        H{User changed it manually?}
+        CLR[Clear the Mattermost status]
+        D -->|No| STOP([Stop])
+        D -->|Yes| F
+        F -->|No| G
+        G -->|Yes| H
+        H -->|No| CLR
+    end
+
+    subgraph SCAN["Scan today's events"]
+        K{For each event:\nhas custom_status marker?}
+        AD{All-day event?}
+        M{Already ended?}
+        N{Already started?}
+        P[Schedule trigger\nfor event start]
+        NEXT{More events?}
+        K -->|No| NEXT
+        K -->|Yes| AD
+        AD -->|Yes| NEXT
+        AD -->|No| M
+        M -->|Yes| NEXT
+        M -->|Not yet| N
+        N -->|No — future event| P --> NEXT
+        NEXT -->|Yes, next event| K
+    end
+
+    subgraph UPDATE["Set the Mattermost status"]
+        Q{Manual status active?}
+        Q -->|Yes| SKIP([Skip — do not overwrite])
+        Q -->|No| S[Set status to event's\nemoji, text and end time]
+        S --> T[Remember status\nwas set by script]
+    end
+
+    A --> K
+    C --> D
+    F -->|Yes| K
+    G -->|No| K
+    H -->|Yes| K
+    CLR --> K
+    NEXT -->|No| Z([Done])
+    N -->|Yes — in progress| Q
+    ST --> Q
+```
+
 1. **Morning trigger** (daily at 00:00): Scans today's events for status markers
 2. **Calendar trigger** (on event updates): Immediately checks for status changes
 3. **Status update**: When an event starts, your Mattermost status is updated
@@ -193,4 +249,5 @@ the handler function returns early if the current time is outside working hours.
 
 - **Single calendar**: Only the user's primary calendar is monitored. Multiple calendars are not supported.
 - **No overlapping events**: The script assumes no overlapping events with status markers. Overlaps may lead to unexpected behavior.
-- **Status clearing behavior**: When calendar events are updated or deleted, the script clears any active status if no event is currently active. This ensures the status is cleared even if an event started before it was deleted. Note: This will also clear any custom status set outside of this script.
+- **Status clearing behavior**: When calendar events are updated or deleted, the script clears any active status if no event is currently active and the status was set by this script. Custom statuses set outside of this script are preserved.
+- **Manual status takes priority**: If you set a custom status manually (e.g. an out-of-office status), the script will not overwrite or clear it. Calendar-based updates resume only once the manual status expires or is removed.
