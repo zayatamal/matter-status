@@ -21,32 +21,26 @@ Automatically sync your Mattermost custom status with your Google Calendar. Matt
     sudo apt install npm
     ```
 
-3. Install clasp (Google Apps Script CLI):
+3. Authenticate with Google:
 
    ```bash
-   sudo npm install -g @google/clasp
-   ```
-
-4. Authenticate with Google:
-
-   ```bash
-   clasp login
+   npx @google/clasp login
    ```
 
     Follow the prompts to authorize clasp with your Google account.
 
-5. Link to your Google Apps Script project:
+4. Link to your Google Apps Script project:
 
    **First time:** create a new Apps Script project:
 
    ```bash
-   clasp create --type webapp
+   npx @google/clasp create --type standalone
    ```
 
-   **Re-cloning** (you already have an Apps Script project): find your script ID with `clasp list`, then clone it:
+   **Re-cloning** (you already have an Apps Script project): find your script ID with `npx @google/clasp list`, then clone it:
 
    ```bash
-   clasp clone <scriptId>
+   npx @google/clasp clone <scriptId>
    ```
 
 ### Configure
@@ -73,7 +67,7 @@ Automatically sync your Mattermost custom status with your Google Calendar. Matt
 3. Push to Google Apps Script:
 
    ```bash
-   clasp push
+   npx @google/clasp push
    ```
 
 ### Initial Setup
@@ -83,7 +77,7 @@ Set up automatic triggers (run once):
 1. Open the script in your browser:
 
    ```bash
-   clasp open
+   npx @google/clasp open
    ```
 
 2. Select `setupRecurringTriggers` from the function dropdown and click **Run**
@@ -144,7 +138,7 @@ Status updates outside these hours are ignored. See [Configuration](#configurati
 
 - Check that `custom_status` is in the event description
 - Verify working hours include the event time
-- Open `clasp open` and check the logs
+- Run `npx @google/clasp open` and check the logs
 
 ## Reference
 
