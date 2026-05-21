@@ -115,7 +115,7 @@ Add a calendar event with a custom status:
     Events without it will be ignored.
 3. Save the event
 
-The status will update automatically when the event starts and clear when it ends.
+For all-day events, the status is set in the morning (midnight trigger) or when a calendar change is detected, with the expiry set to the event's end date (which may span multiple days). For timed events (used only when no all-day status event exists), the status is set when the event starts and clears when it ends.
 
 See [Event Description Format](#event-description-format) for the exact format and available emoji options in [Available Emojis](#available-emojis).
 
@@ -172,7 +172,7 @@ flowchart TD
 
     subgraph CHANGE["On calendar change"]
         D{Working hours?}
-        F{Status event active now?}
+        F{Active status event?}
         G{Script set the status?}
         H{User changed it manually?}
         CLR[Clear the Mattermost status]
@@ -184,20 +184,22 @@ flowchart TD
     end
 
     subgraph SCAN["Scan today's events"]
-        K{For each event:\nhas custom_status marker?}
-        AD{All-day event?}
+        AD{All-day event with\ncustom_status marker?}
+        AD -->|Yes — use first match| Q
+        AD -->|No| K
+        K{For each timed event:\nhas custom_status marker?}
         M{Already ended?}
         N{Already started?}
         P[Schedule trigger\nfor event start]
         NEXT{More events?}
         K -->|No| NEXT
-        K -->|Yes| AD
-        AD -->|Yes| NEXT
-        AD -->|No| M
+        K -->|Yes| M
         M -->|Yes| NEXT
         M -->|Not yet| N
         N -->|No — future event| P --> NEXT
         NEXT -->|Yes, next event| K
+        NEXT -->|No| Z([Done])
+        N -->|Yes — in progress| Q
     end
 
     subgraph UPDATE["Set the Mattermost status"]
@@ -207,21 +209,20 @@ flowchart TD
         S --> T[Remember status\nwas set by script]
     end
 
-    A --> K
+    A --> AD
     C --> D
-    F -->|Yes| K
-    G -->|No| K
-    H -->|Yes| K
-    CLR --> K
-    NEXT -->|No| Z([Done])
-    N -->|Yes — in progress| Q
+    F -->|Yes| AD
+    G -->|No| AD
+    H -->|Yes| AD
+    CLR --> AD
     ST --> Q
+    T --> Z2([Done])
 ```
 
-1. **Morning trigger** (daily at 00:00): Scans today's events for status markers
-2. **Calendar trigger** (on event updates): Immediately checks for status changes
-3. **Status update**: When an event starts, your Mattermost status is updated
-4. **Status clear**: The duration of the status is set to the event end time. When the event ends, the status is cleared.
+1. **Morning trigger** (daily at 00:00): Scans today's events. All-day events with a status marker take priority and are set directly. If none exist, triggers are scheduled for upcoming timed events with status markers.
+2. **Calendar trigger** (on event updates): Immediately checks for status changes and sets or clears the status accordingly
+3. **Status update**: All-day status events take priority over timed events. The status expiry is set to the event's end time (all-day events may span multiple days)
+4. **Status clear**: When no status event is active and the status was set by this script, it is cleared automatically
 
 ### Configuration Reference
 
@@ -247,7 +248,8 @@ the handler function returns early if the current time is outside working hours.
 
 ## Known Limitations
 
+- **All-day events take priority**: If an all-day event with a status marker exists on a given day, timed events are ignored for that day.
 - **Single calendar**: Only the user's primary calendar is monitored. Multiple calendars are not supported.
-- **No overlapping events**: The script assumes no overlapping events with status markers. Overlaps may lead to unexpected behavior.
+- **No overlapping events**: If multiple events with status markers overlap (all-day or timed), the first one returned by the Calendar API is used. The order is not guaranteed.
 - **Status clearing behavior**: When calendar events are updated or deleted, the script clears any active status if no event is currently active and the status was set by this script. Custom statuses set outside of this script are preserved.
 - **Manual status takes priority**: If you set a custom status manually (e.g. an out-of-office status), the script will not overwrite or clear it. Calendar-based updates resume only once the manual status expires or is removed.
