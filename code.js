@@ -248,12 +248,22 @@ function getMattermostCustomStatus() {
 /***********************
  UTILITIES
 ************************/
+function sanitizeDescription(text) {
+  return text
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[^\x20-\x7E]/g, "");
+}
+
 function hasStatusMarker(description) {
-  return description.trimStart().toLowerCase().startsWith(CUSTOM_STATUS_MARKER);
+  return sanitizeDescription(description)
+    .trimStart()
+    .toLowerCase()
+    .startsWith(CUSTOM_STATUS_MARKER);
 }
 
 function parseStatusFromEventDescription(description) {
-  let jsonText = description
+  let jsonText = sanitizeDescription(description)
     .trimStart()
     .slice(CUSTOM_STATUS_MARKER.length)
     .trim();
@@ -261,7 +271,15 @@ function parseStatusFromEventDescription(description) {
   // Decode HTML entities
   jsonText = decodeHtmlEntities(jsonText);
 
-  const data = JSON.parse(jsonText);
+  // Strip any extra prose and smart quotes before JSON parsing
+  jsonText = extractJsonObject(jsonText);
+
+  let data;
+  try {
+    data = JSON.parse(jsonText);
+  } catch (err) {
+    throw new Error(`custom_status JSON is invalid: ${err.message}`);
+  }
 
   if (
     !data ||
@@ -288,6 +306,17 @@ function decodeHtmlEntities(text) {
     "&#39;": "'",
   };
   return text.replace(/&quot;|&amp;|&lt;|&gt;|&#39;/g, (match) => map[match]);
+}
+
+function extractJsonObject(text) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || start > end) {
+    throw new Error("custom_status JSON is invalid: missing '{' or '}'");
+  }
+
+  return text.slice(start, end + 1).trim();
 }
 
 /*****************************
