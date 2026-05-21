@@ -37,8 +37,16 @@ Automatically sync your Mattermost custom status with your Google Calendar. Matt
 
 5. Link to your Google Apps Script project:
 
+   **First time:** create a new Apps Script project:
+
    ```bash
-   clasp create
+   clasp create --type webapp
+   ```
+
+   **Re-cloning** (you already have an Apps Script project): find your script ID with `clasp list`, then clone it:
+
+   ```bash
+   clasp clone <scriptId>
    ```
 
 ### Configuration
@@ -46,10 +54,10 @@ Automatically sync your Mattermost custom status with your Google Calendar. Matt
 1. Copy the sample config:
 
    ```bash
-   cp config.gs.sample config.gs
+   cp config.js.sample config.js
    ```
 
-2. Edit `config.gs` with your settings:
+2. Edit `config.js` with your settings:
 
    ```javascript
    const USER_CONFIG = {
@@ -109,7 +117,7 @@ Add a calendar event with a custom status:
 
 The status will update automatically when the event starts and clear when it ends.
 
-See [Event Description Format](#event-description-format) for the exact format and available emoji options in [Available Emoji](#available-emoji).
+See [Event Description Format](#event-description-format) for the exact format and available emoji options in [Available Emojis](#available-emojis).
 
 ### Find Your Mattermost Token
 
@@ -117,11 +125,11 @@ See [Event Description Format](#event-description-format) for the exact format a
 2. Click your profile → Account Settings
 3. Select "Personal Access Tokens"
 4. Click "Create New Token"
-5. Copy the token and paste it in `config.gs`
+5. Copy the token and paste it in `config.js`
 
 ### Change Working Hours
 
-Edit `config.gs` to adjust when status updates are active:
+Edit `config.js` to adjust when status updates are active:
 
 ```javascript
 WORK_START_HOUR: 9,    // Status updates start at 9 AM
@@ -132,7 +140,7 @@ Status updates outside these hours are ignored. See [Configuration Reference](#c
 
 ## Reference
 
-### Available Emoji
+### Available Emojis
 
 [Emoji names can be found here](https://www.webfx.com/tools/emoji-cheat-sheet/).
 
