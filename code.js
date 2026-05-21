@@ -34,22 +34,29 @@ function onMorningTrigger() {
 ************************/
 function planEventStatusTriggers() {
   const now = new Date();
-
-  const calendar = CalendarApp.getDefaultCalendar();
-  const events = calendar.getEventsForDay(now);
+  const events = CalendarApp.getDefaultCalendar().getEventsForDay(now);
   clearEventStatusTriggers();
+
+  const allDayStatusEvent = events.find(
+    (event) => event.isAllDayEvent() && hasStatusMarker(event.getDescription())
+  );
+
+  if (allDayStatusEvent) {
+    Logger.log("Setting status for all-day event: " + allDayStatusEvent.getTitle());
+    updateMattermostStatusFromEvent(allDayStatusEvent);
+    return;
+  }
 
   for (const event of events) {
     if (event.isAllDayEvent()) continue;
     if (hasStatusMarker(event.getDescription())) {
       const start = event.getStartTime();
       const end = event.getEndTime();
-      // Event already finished
       if (end <= now) continue;
 
       if (start <= now) {
         Logger.log("Setting status for " + event.getTitle());
-        updateMattermostStatusFromCurrentEvent();
+        updateMattermostStatusFromEvent(event);
         continue;
       }
 
@@ -85,11 +92,18 @@ function createEventStartTrigger(key, startTime) {
 ************************/
 function getCurrentStatusEvent() {
   const now = new Date();
-  const events = CalendarApp.getDefaultCalendar().getEvents(
+  const calendar = CalendarApp.getDefaultCalendar();
+
+  const allDayStatusEvent = calendar.getEventsForDay(now).find(
+    (event) => event.isAllDayEvent() && hasStatusMarker(event.getDescription())
+  );
+  if (allDayStatusEvent) return allDayStatusEvent;
+
+  const timedEvents = calendar.getEvents(
     now,
     new Date(now.getTime() + CALENDAR_EVENT_SEARCH_WINDOW_MS)
   );
-  for (const event of events) {
+  for (const event of timedEvents) {
     if (hasStatusMarker(event.getDescription())) return event;
   }
   return null;
