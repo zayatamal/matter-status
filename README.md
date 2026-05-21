@@ -4,7 +4,7 @@ Automatically sync your Mattermost custom status with your Google Calendar. Matt
 
 ## Getting Started
 
-### Installation
+### Install
 
 1. Clone this repository:
 
@@ -49,7 +49,7 @@ Automatically sync your Mattermost custom status with your Google Calendar. Matt
    clasp clone <scriptId>
    ```
 
-### Configuration
+### Configure
 
 1. Copy the sample config:
 
@@ -136,7 +136,15 @@ WORK_START_HOUR: 9,    // Status updates start at 9 AM
 WORK_END_HOUR: 17,     // Status updates stop at 5 PM
 ```
 
-Status updates outside these hours are ignored. See [Configuration Reference](#configuration-reference) for details.
+Status updates outside these hours are ignored. See [Configuration](#configuration) for details.
+
+## Troubleshooting
+
+**Status not updating?**
+
+- Check that `custom_status` is in the event description
+- Verify working hours include the event time
+- Open `clasp open` and check the logs
 
 ## Reference
 
@@ -160,7 +168,23 @@ custom_status
 - Both `emoji` and `text` fields are required
 - Events without this marker are ignored
 
-### How It Works
+### Configuration
+
+| Setting | Type | Description |
+| ------- | ---- | ----------- |
+| `WORK_START_HOUR` | number | Hour (0-23) when status updates begin |
+| `WORK_END_HOUR` | number | Hour (0-23) when status updates stop |
+| `MATTERMOST_URL` | string | Your Mattermost instance URL |
+| `MATTERMOST_TOKEN` | string | Personal access token (keep secret!) |
+
+Working hours are only used for reducing the number of API calls outside business hours.
+Any calendar events outside these hours are ignored.
+Though we cannot have a conditional trigger based on time,
+the handler function returns early if the current time is outside working hours.
+
+## Explanation
+
+### Architecture
 
 ```mermaid
 flowchart TD
@@ -184,13 +208,12 @@ flowchart TD
     end
 
     subgraph SCAN["Scan today's events"]
-        AD{All-day event with\ncustom_status marker?}
-        AD -->|Yes — use first match| Q
+        AD{All-day event with custom_status marker?}
         AD -->|No| K
-        K{For each timed event:\nhas custom_status marker?}
+        K{For each timed event: has custom_status marker?}
         M{Already ended?}
         N{Already started?}
-        P[Schedule trigger\nfor event start]
+        P[Schedule trigger for event start]
         NEXT{More events?}
         K -->|No| NEXT
         K -->|Yes| M
@@ -199,16 +222,17 @@ flowchart TD
         N -->|No — future event| P --> NEXT
         NEXT -->|Yes, next event| K
         NEXT -->|No| Z([Done])
-        N -->|Yes — in progress| Q
     end
 
     subgraph UPDATE["Set the Mattermost status"]
         Q{Manual status active?}
         Q -->|Yes| SKIP([Skip — do not overwrite])
-        Q -->|No| S[Set status to event's\nemoji, text and end time]
-        S --> T[Remember status\nwas set by script]
+        Q -->|No| S[Set status to event's emoji, text and end time]
+        S --> T[Remember status was set by script]
+        T --> Z2([Done])
     end
-
+    AD -->|Yes — use first match| Q
+    N -->|Yes — in progress| Q
     A --> AD
     C --> D
     F -->|Yes| AD
@@ -216,35 +240,12 @@ flowchart TD
     H -->|Yes| AD
     CLR --> AD
     ST --> Q
-    T --> Z2([Done])
 ```
 
 1. **Morning trigger** (daily at 00:00): Scans today's events. All-day events with a status marker take priority and are set directly. If none exist, triggers are scheduled for upcoming timed events with status markers.
 2. **Calendar trigger** (on event updates): Immediately checks for status changes and sets or clears the status accordingly
 3. **Status update**: All-day status events take priority over timed events. The status expiry is set to the event's end time (all-day events may span multiple days)
 4. **Status clear**: When no status event is active and the status was set by this script, it is cleared automatically
-
-### Configuration Reference
-
-| Setting | Type | Description |
-| ------- | ---- | ----------- |
-| `WORK_START_HOUR` | number | Hour (0-23) when status updates begin |
-| `WORK_END_HOUR` | number | Hour (0-23) when status updates stop |
-| `MATTERMOST_URL` | string | Your Mattermost instance URL |
-| `MATTERMOST_TOKEN` | string | Personal access token (keep secret!) |
-
-Working hours are only used for reducing the number of API calls outside business hours.
-Any calendar events outside these hours are ignored.
-Though we cannot have a conditional trigger based on time,
-the handler function returns early if the current time is outside working hours.
-
-## Troubleshooting
-
-**Status not updating?**
-
-- Check that `custom_status` is in the event description
-- Verify working hours include the event time
-- Open `clasp open` and check the logs
 
 ## Known Limitations
 
