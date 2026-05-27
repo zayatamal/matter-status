@@ -416,7 +416,7 @@ function setupRecurringTriggers() {
       .timeBased()
       .onWeekDay(day)
       .atHour(MORNING_TRIGGER_START_HOUR)
-      .nearMinute(TRIGGER_START_MINUTE)
+      .nearMinute(MORNING_TRIGGER_START_MINUTE)
       .create();
   }
 
@@ -427,7 +427,7 @@ function setupRecurringTriggers() {
 
   Logger.log(
     `Triggers configured: daily at ${MORNING_TRIGGER_START_HOUR}:${String(
-      TRIGGER_START_MINUTE
+      MORNING_TRIGGER_START_MINUTE
     ).padStart(2, "0")} + on calendar changes`
   );
 }
