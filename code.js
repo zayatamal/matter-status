@@ -421,7 +421,7 @@ function setupRecurringTriggers() {
   }
 
   ScriptApp.newTrigger(ON_CALENDAR_CHANGE_HANDLER)
-    .forUserCalendar(CalendarApp.getDefaultCalendar().getName())
+    .forUserCalendar(CalendarApp.getDefaultCalendar().getId())
     .onEventUpdated()
     .create();
 
