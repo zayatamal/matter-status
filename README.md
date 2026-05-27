@@ -37,6 +37,8 @@ Automatically sync your Mattermost custom status with your Google Calendar. Matt
    npx @google/clasp create --type standalone
    ```
 
+   This might fail and prompt you to enable `Google Apps Script API`. Follow the instructions.
+
    **Re-cloning** (you already have an Apps Script project): find your script ID with `npx @google/clasp list`, then clone it:
 
    ```bash
@@ -77,7 +79,7 @@ Set up automatic triggers (run once):
 1. Open the script in your browser:
 
    ```bash
-   npx @google/clasp open
+   npx @google/clasp open-script
    ```
 
 2. Select `setupRecurringTriggers` from the function dropdown and click **Run**
@@ -116,7 +118,7 @@ See [Event Description Format](#event-description-format) for the exact format a
 ### Find Your Mattermost Token
 
 1. Go to Mattermost
-2. Click your profile → Account Settings
+2. Click your profile → Security
 3. Select "Personal Access Tokens"
 4. Click "Create New Token"
 5. Copy the token and paste it in `config.js`
