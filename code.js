@@ -18,7 +18,7 @@ function onCalendarChange() {
   const day = now.getDay(); // 0 = Sunday, 6 = Saturday
 
   // Skip night hours
-  if (hours < WORK_START_HOUR || hours > WORK_END_HOUR) return;
+  if (hours < USER_CONFIG.WORK_START_HOUR || hours > USER_CONFIG.WORK_END_HOUR) return;
   if (day === 0 || day === 6) return; // skip weekends
 
   if (!getCurrentStatusEvent()) clearMattermostCustomStatusIfSetByScript();
@@ -127,12 +127,12 @@ function getMattermostUserId() {
   if (savedId) {
     return savedId;
   }
-  const url = `${MATTERMOST_URL}/api/v4/users/me`; // API endpoint to get current user info
+  const url = `${USER_CONFIG.MATTERMOST_URL}/api/v4/users/me`; // API endpoint to get current user info
 
   const options = {
     method: "get",
     headers: {
-      Authorization: `Bearer ${MATTERMOST_TOKEN}`,
+      Authorization: `Bearer ${USER_CONFIG.MATTERMOST_TOKEN}`,
       "Content-Type": "application/json",
     },
     muteHttpExceptions: true,
@@ -204,7 +204,7 @@ function updateMattermostStatus(statusData) {
   }
 
   const userId = getMattermostUserId();
-  const url = `${MATTERMOST_URL}/api/v4/users/${userId}/status/custom`;
+  const url = `${USER_CONFIG.MATTERMOST_URL}/api/v4/users/${userId}/status/custom`;
 
   const payload = {
     emoji: statusData.emoji,
@@ -215,7 +215,7 @@ function updateMattermostStatus(statusData) {
   const options = {
     method: "put",
     headers: {
-      Authorization: `Bearer ${MATTERMOST_TOKEN}`,
+      Authorization: `Bearer ${USER_CONFIG.MATTERMOST_TOKEN}`,
       "Content-Type": "application/json",
     },
     payload: JSON.stringify(payload),
@@ -240,12 +240,12 @@ function updateMattermostStatus(statusData) {
 
 function clearMattermostCustomStatus() {
   const userId = getMattermostUserId();
-  const url = `${MATTERMOST_URL}/api/v4/users/${userId}/status/custom`;
+  const url = `${USER_CONFIG.MATTERMOST_URL}/api/v4/users/${userId}/status/custom`;
 
   const options = {
     method: "delete",
     headers: {
-      Authorization: `Bearer ${MATTERMOST_TOKEN}`,
+      Authorization: `Bearer ${USER_CONFIG.MATTERMOST_TOKEN}`,
       Accept: "application/json",
     },
     muteHttpExceptions: true,
@@ -284,12 +284,12 @@ function clearMattermostCustomStatusIfSetByScript() {
 }
 
 function getMattermostCustomStatus() {
-  const url = `${MATTERMOST_URL}/api/v4/users/me`; // API endpoint to get current user info
+  const url = `${USER_CONFIG.MATTERMOST_URL}/api/v4/users/me`; // API endpoint to get current user info
 
   const options = {
     method: "get",
     headers: {
-      Authorization: `Bearer ${MATTERMOST_TOKEN}`,
+      Authorization: `Bearer ${USER_CONFIG.MATTERMOST_TOKEN}`,
       "Content-Type": "application/json",
     },
     muteHttpExceptions: true,
